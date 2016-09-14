@@ -15,22 +15,22 @@ LIB_DIR=./lib/
 INC_DIR=./include/
 BIN_DIR=./bin/
 SRC_DIR=./src/
-TST_DIR=./testes/
-CFLAGS=-m32 -c
 
 all: lib
 
 lib: cthread.o cdata.o
-	ar crs $(LIB_DIR)libcthread.a $(BIN_DIR)support.o $(BIN_DIR)cdata.o $(BIN_DIR)cthread.o
+	ar crs $(LIB_DIR)libthread.a $(BIN_DIR)support.o $(BIN_DIR)cdata.o $(BIN_DIR)cthread.o
 
 cthread.o: $(SRC_DIR)cthread.c
-	$(CC) $(CFLAGS) $(SRC_DIR)cthread.c -Wall -o $(BIN_DIR)cthread.o
+	$(CC) -c $(SRC_DIR)cthread.c -Wall -o $(BIN_DIR)cthread.o
 
 cdata.o: $(SRC_DIR)cdata.c
-	$(CC) $(CFLAGS) $(SRC_DIR)cdata.c -Wall -o $(BIN_DIR)cdata.o
+	$(CC) -c $(SRC_DIR)cdata.c -Wall -o $(BIN_DIR)cdata.o
 
 # regran: #dependências para a regran
 #  	$(CC) -o $(BIN_DIR)regran $(SRC_DIR)regran.c -Wall
 
-clean:
-	find $(BIN_DIR) $(LIB_DIR) $(TST_DIR) -type f ! -name 'support.o' -delete
+# clean:
+# 	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/*.o $(SRC_DIR)/*~ $(INC_DIR)/*~ *~
+
+
