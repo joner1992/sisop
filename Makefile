@@ -20,7 +20,7 @@ CFLAGS=-m32 -c
 
 all: lib
 
-lib: cthread.o cdata.o
+lib: clean cthread.o cdata.o
 	ar crs $(LIB_DIR)libcthread.a $(BIN_DIR)support.o $(BIN_DIR)cdata.o $(BIN_DIR)cthread.o
 
 cthread.o: $(SRC_DIR)cthread.c

@@ -21,10 +21,7 @@
 #define	TERMINO	4
 
 #define stackSize SIGSTKSZ
-
-
-char groupName[] = "Nome: Filipe Joner | Cartao: 208840 \nNome: Jean Andrade | Cartao: \nNome: Rodrigo Dal Ri | Cartao: 244936";
-
+#define MAINTID 0
 
 /************
 * VARIÁVEIS GLOBAIS
@@ -32,43 +29,133 @@ char groupName[] = "Nome: Filipe Joner | Cartao: 208840 \nNome: Jean Andrade | C
 
 int tid = 1; //Mantém tid global para enumerar threads
 
-PFILA2 filaAptos = NULL;
-PFILA2 filaBloqueados = NULL;
-int readyQueueCreated = 0;
-int blockedQueueCreated = 0;
 
-TCB_t *mainContext = NULL;
-int mainContextCreated = 0;
+FILA2 filaAptos;
+FILA2 filaBloqueados;
+int uninitializedDependencies = 1;
+
 
 /**************
 * FUNÇÕES AUXILIARES
 **************/
-int generateTicket(){
+int generateTicket() {
 	unsigned int random = Random2();
 	uint8_t converter = random;
 	int ticket = converter;
 	return ticket;
 }
 
-int createMainContext(){
 
+int createMainContext() {
+	//gera Contexto da main
+	TCB_t *mainThread = (TCB_t*) malloc(sizeof(TCB_t));
+	mainThread->tid = MAINTID;
+	mainThread->state = APTO;
+	mainThread->ticket = generateTicket(); // Valor dummie
 
-	return SUCCESS;
+	getcontext(&mainThread->context);
+
+	if (mainThread == NULL) {
+		return ERROR;
+	}
+	else {
+		printf("Criou Main Context.\n");
+		printf("Criou THREAD DE TID: %d | TICKET: %d\n", mainThread->tid, mainThread->ticket);
+
+		int addedToReadyQueue;
+		addedToReadyQueue = AppendFila2(&filaAptos, (void *) mainThread);
+		if (addedToReadyQueue == SUCCESS) {
+			printf("Adicionou na fila de aptos!\n");
+			return SUCCESS;
+		}
+		else {
+			return ERROR;
+		}
+
+	}
 }
 
-int createReadyQueue(){
+int createBlockedQueue() {
+	//Inicializa fila de bloqueados
+	int initializedBlockedQueue;
+	initializedBlockedQueue = CreateFila2(&filaBloqueados);
+
+	if (initializedBlockedQueue == ERROR) {
+		return ERROR;
+	}
+	else {
+		printf("Criou Fila de Bloqueados.\n");
+		return SUCCESS;
+	}
+}
+
+
+int createReadyQueue() {
+	//Inicializa fila de aptos
+	int initializedReadyQueue;
+	initializedReadyQueue = CreateFila2(&filaAptos);
+
+	if (initializedReadyQueue == ERROR) {
+		return ERROR;
+	}
+	else {
+		printf("Criou Fila de Aptos.\n");
+		return SUCCESS;
+	}
+
+}
+
+
+
+
+int initialize() {
+	// Criar MainContext
+	// Criar fila de bloqueados
+	// Criar fila de aptos
+	// Fila de semáforos irá ser criada apenas quando for necessária
+
+	int readyQueueinitilized = 0;
+	int blockedQueueinitilized = 0;
+	int mainContextCreated = 0;
+
+	blockedQueueinitilized = createBlockedQueue();
+	printf("Checou no initialize!\n");
+	readyQueueinitilized = createReadyQueue();
 	mainContextCreated = createMainContext();
 
+	if (mainContextCreated == ERROR || blockedQueueinitilized == ERROR || readyQueueinitilized == ERROR) {
+		return ERROR;
+	}
+	else {
+		return SUCCESS;
+	}
 
-	return SUCCESS;
 }
 
 
-int createBlockedQueue(){
 
+void runsThroughReadyQueue(){
+	int work;
+	work = FirstFila2(&filaAptos);
+	if(work==0){
+		void *tcb;
+		tcb = GetAtIteratorFila2(&filaAptos);
+		TCB_t *teste = (TCB_t*) malloc(sizeof(TCB_t));
+		teste = (TCB_t*) tcb;
+		printf("%d\n", teste->tid);
+		int work2 = 0;
+		while(work2 == 0){
+			work2 = NextFila2(&filaAptos);
+			tcb = GetAtIteratorFila2(&filaAptos);
+			if(tcb == NULL){
+				return;
+			}
+			teste = (TCB_t*) tcb;
+			printf("%d\n", teste->tid);
+		}
 
+	}
 
-	return SUCCESS;
 }
 
 
@@ -76,8 +163,11 @@ int createBlockedQueue(){
 *****************/
 int ccreate(void* (*start)(void*), void *arg) {
 
-	if(readyQueueCreated == 0){
-		readyQueueCreated = createReadyQueue();
+	if (uninitializedDependencies == 1) {
+		uninitializedDependencies = initialize();
+		if (uninitializedDependencies == ERROR) {
+			return ERROR;
+		}
 	}
 
 
@@ -91,9 +181,9 @@ int ccreate(void* (*start)(void*), void *arg) {
 	newThread->context.uc_link = 0;
 	newThread->context.uc_stack.ss_sp = (char*) malloc(stackSize);
 
-	if (newThread->context.uc_stack.ss_sp == NULL){
+	if (newThread->context.uc_stack.ss_sp == NULL) {
 		return ERROR; // Erro ao alocar espaço para thread
-	} 
+	}
 
 	newThread->context.uc_stack.ss_size = stackSize;
 
@@ -101,46 +191,96 @@ int ccreate(void* (*start)(void*), void *arg) {
 
 
 	tid++;
-	printf("Criou THREAD DE TID: %d | TICKET: %d\n",newThread->tid, newThread->ticket);
+	printf("Criou THREAD DE TID: %d | TICKET: %d\n", newThread->tid, newThread->ticket);
 
+	int addedToReadyQueue;
+	addedToReadyQueue = AppendFila2(&filaAptos, (void *) newThread);
+	if (addedToReadyQueue == SUCCESS) {
+		printf("Adicionou na fila de aptos!\n");
+		return newThread->tid;;
+	}
+	else {
+		return ERROR;
+	}
 
-	return newThread->tid;
 
 }
 
 int cyield(void) {
+	if (uninitializedDependencies == 1) {
+		uninitializedDependencies = initialize();
+		if (uninitializedDependencies == ERROR) {
+			return ERROR;
+		}
+	}
 
 	return ERROR;
 }
 
 int cjoin(int tid) {
+	if (uninitializedDependencies == 1) {
+		uninitializedDependencies = initialize();
+		if (uninitializedDependencies == ERROR) {
+			return ERROR;
+		}
+	}
 
 	return ERROR;
 
 }
 
 int csem_init(csem_t *sem, int count) {
+	if (uninitializedDependencies == 1) {
+		uninitializedDependencies = initialize();
+		if (uninitializedDependencies == ERROR) {
+			return ERROR;
+		}
+	}
+
 	return ERROR;
 }
 
 int cwait(csem_t *sem) {
+	if (uninitializedDependencies == 1) {
+		uninitializedDependencies = initialize();
+		if (uninitializedDependencies == ERROR) {
+			return ERROR;
+		}
+	}
+
+
 	return ERROR;
 }
 
 int csignal(csem_t *sem) {
+	if (uninitializedDependencies == 1) {
+		uninitializedDependencies = initialize();
+		if (uninitializedDependencies == ERROR) {
+			return ERROR;
+		}
+	}
+
 	return ERROR;
 }
 
 int cidentify(char *name, int size) {
+	char groupName[] = "Nome: Filipe Joner Cartao: 208840\nNome: Jean Andrade Cartao: 252846\nNome: Rodrigo Dal Ri Cartao: 244936";
+	int realSize = sizeof(groupName);
 	int i = 0;
-	if(*name <= 0 || size <= 0){
+	if (size <= 0 || size > realSize) {
 		return ERROR;
-	} 
+	}
 
-	while(i < size){
-		printf("%c", *name);
-		*name++;
+	while (i < size) {
+		*name = groupName[i];
+		name++;
 		i++;
 	}
 	return SUCCESS;
 }
+
+
+
+/***************
+* FUNÇÕES DE TESTE
+****************/

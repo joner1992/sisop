@@ -19,7 +19,7 @@ int main(int argc, char *argv[]){
 
 	int valor = atoi(argv[0]);
 	int i=0;
-	for(i; i< 100; i++){
+	for(i; i< 10; i++){
 		int a = ccreate(ImprimeDez, (void*)&valor);
 	}
 
