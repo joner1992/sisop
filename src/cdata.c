@@ -170,47 +170,6 @@ int searchForTid(PFILA2 fila, int tid)
 
 }
 
-void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTerminated)
-{
-	puts("ENTROU UNJOIN \n");
-	int first;
-	first = FirstFila2(filaBloqueados);
-	void *node;
-	if (first == SUCCESS) {
-		puts("ENTROU NA FILA BLOQUEADOS");
-		unjoin = (TCB_t*) GetAtIteratorFila2(filaBloqueados);
-		node = GetAtIteratorFila2(filaBloqueados);
-		if (unjoin->tid == tidThreadTerminated) {
-			printf("Tirou de bloqueados thread de TID: %d\n",unjoin->tid);
-			DeleteAtIteratorFila2(filaBloqueados);
-			AppendFila2(filaAptos, (void *) unjoin);
-		}
-		else {
-			int iterator = 0;
-			while (iterator == 0) {
-				
-				iterator = NextFila2(filaBloqueados);
-				node = GetAtIteratorFila2(filaBloqueados);
-				if (node == NULL) {
-					return;
-				}
-				else {
-					unjoin = (TCB_t*) node;
-					if (unjoin->tid == tidThreadTerminated) {
-						printf("Tirou de bloqueados thread de TID: %d\n",unjoin->tid);
-						DeleteAtIteratorFila2(filaBloqueados);
-						AppendFila2(filaAptos, (void *) unjoin);
-					}
-				}
-			}
-			return;
-		}
-	}
-	else
-		return;
-
-
-}
 
 
 void runsThroughQueue(PFILA2 fila)

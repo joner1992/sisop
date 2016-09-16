@@ -36,6 +36,7 @@ TCB_t *CPU; //Fila criada para "simular" a CPU;
 TCB_t mainThread;
 FILA2 filaAptos;
 FILA2 filaBloqueados;
+FILA2 filaJoin;
 int uninitializedDependencies = 1;
 
 
@@ -56,6 +57,14 @@ int clearCPU()
 
 }
 
+void unjoinProcesses(int tidThreadTerminated)
+{
+  AppendFila2(&filaAptos, (void *) &mainThread);
+  return;
+}
+
+
+
 void terminate()
 {
   //VERIFICAR FILA DE BLOQUEADOS -> SE ALGUM ESTIVER BLOQUEADO,
@@ -64,7 +73,7 @@ void terminate()
   // RETIRA PROCESSO DE ESTADO EXECUTANDO
   
     printf("ENTROU PARA TERMINATE\n");
-    unjoinProcesses(&filaBloqueados, &filaAptos, CPU->tid);
+    unjoinProcesses(CPU->tid);
     clearCPU();
     setcontext(&contextDispatcher);
 
@@ -135,6 +144,10 @@ int createBlockedQueue()
 
 }
 
+int createJoinQueue(){
+  return createQueue(&filaJoin);
+}
+
 int createMainContext() {
 	//gera Contexto da main
 	mainThread.tid = MAINTID;
@@ -173,17 +186,19 @@ int initialize()
   // Criar threads de dispatcher e terminate
   // Fila de semáforos irá ser criada apenas quando for necessária
 
+  printf("Chegou no initialize!\n");
   int dispatcherContextCreated;
   int terminateContextCreated;
 
   int blockedQueueinitilized;
+  int joinQueueinitilized;
   int readyQueueinitilized;
   int mainContextCreated;
 
 
 
   blockedQueueinitilized = createBlockedQueue();
-  printf("Chegou no initialize!\n");
+  joinQueueinitilized = createJoinQueue();
   readyQueueinitilized = createReadyQueue();
   mainContextCreated = createMainContext();
   dispatcherContextCreated = createDispatcherContext();
@@ -191,6 +206,7 @@ int initialize()
 
   if (mainContextCreated == ERROR || 
       blockedQueueinitilized == ERROR || 
+      joinQueueinitilized == ERROR ||
       readyQueueinitilized == ERROR || 
       dispatcherContextCreated == ERROR || 
       terminateContextCreated == ERROR) {

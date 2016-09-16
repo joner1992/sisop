@@ -26,11 +26,15 @@ typedef struct s_TCB {
 	ucontext_t 	context;	// contexto de execução da thread (SP, PC, GPRs e recursos) 
 } TCB_t; 
 
+typedef struct t_JOIN {
+    int tid;
+    int threadWaiting;
+} BLOCK_join;
+
 int createQueue(PFILA2 fila);
 int generateTicket();
 void runsThroughQueue(PFILA2 fila);
 TCB_t *searchForBestTicket(PFILA2 fila, int loteryTicket);
 int searchForTid(PFILA2 fila, int tid);
-void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTerminated);
 
 #endif
