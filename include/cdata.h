@@ -27,12 +27,10 @@ typedef struct s_TCB {
 } TCB_t; 
 
 int createQueue(PFILA2 fila);
-void dispatch(PFILA2 filaAptos,PFILA2 executando);
 int generateTicket();
 void runsThroughQueue(PFILA2 fila);
 TCB_t *searchForBestTicket(PFILA2 fila, int loteryTicket);
 int searchForTid(PFILA2 fila, int tid);
-void terminate(ucontext_t contextMain, PFILA2 filaBloqueados, PFILA2 filaAptos, PFILA2 executando);
 void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTerminated);
 
 #endif

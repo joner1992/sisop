@@ -22,15 +22,13 @@
 
 #define stackSize SIGSTKSZ
 
-
-
-
 TCB_t *tcb;
 TCB_t *unjoin;
 /******************
 * FUNÇÕES AUXILIARES
 *******************/
-int createQueue(PFILA2 fila) {
+int createQueue(PFILA2 fila)
+{
 	//Inicializa fila de bloqueados
 	int initializedQueue;
 	initializedQueue = CreateFila2(fila);
@@ -44,62 +42,16 @@ int createQueue(PFILA2 fila) {
 }
 
 
-int generateTicket() {
+int generateTicket()
+{
 	unsigned int random = Random2();
 	uint8_t converter = random;
 	int ticket = converter;
 	return ticket;
 }
 
-void dispatch(PFILA2 filaAptos, PFILA2 executando) {
-	// Gera bilhete de loteria  ++
-	// Percorre fila para achar os que mais se aproximam ++
-	// Seleciona a thread a ser executada ++
-	// retira ela da fila de aptos ++
-	// faz swap para o contexto selecionado ++
-	TCB_t *nextProcess = (TCB_t*) malloc(sizeof(TCB_t));
-	int loteryTicket = generateTicket();
-
-	nextProcess = searchForBestTicket(filaAptos, loteryTicket);
-	printf("TICKET: %d | TICKET ESCOLHIDO: %d | TID escolhido: %d\n", loteryTicket, nextProcess->ticket, nextProcess->tid);
-
-	nextProcess->state = EXEC;
-	int executingVerifier;
-	executingVerifier = AppendFila2(executando, (void *)nextProcess);
-	if (executingVerifier == SUCCESS) {
-		setcontext(&nextProcess->context);
-	}
-
-}
-
-void terminate(ucontext_t contextMain, PFILA2 filaBloqueados, PFILA2 filaAptos, PFILA2 executando) {
-	//VERIFICAR FILA DE BLOQUEADOS -> SE ALGUM ESTIVER BLOQUEADO,DESBLOQUEIA O PROCESSO;
-	//VERIFICAR FILA DE SEMÁFORO -> CWAIT() / CSIGNAL()
-	// RETIRA PROCESSO DE ESTADO EXECUTANDO
-	int first;
-	puts("Terminate process");
-	first = LastFila2(executando);
-	if (first == SUCCESS) {
-		printf("ENTROU NA FILA DE EXECUTANDO\n");
-		void *node;
-		node = GetAtIteratorFila2(executando);
-		TCB_t *tcb = (TCB_t*) malloc(sizeof(TCB_t));
-		tcb = (TCB_t*) node;
-
-		unjoinProcesses(filaBloqueados, filaAptos, tcb->tid);
-		DeleteAtIteratorFila2(executando);
-		tcb->state = TERMINO;
-
-		setcontext(&contextMain);
-
-	}
-	else{
-		puts("ERRO NA FILA EXECUTANDO");
-	}
-}
-
-
-TCB_t *searchForBestTicket(PFILA2 fila, int loteryTicket) {
+TCB_t *searchForBestTicket(PFILA2 fila, int loteryTicket)
+{
 	// Se o primeiro for igual, retira ele da fila e retorna o tcb
 	//	se não, compara valor de tickets e coloca em min_ticket e aux_tid (para encontrá-lo na próxima iteração)
 	// se não
@@ -114,9 +66,7 @@ TCB_t *searchForBestTicket(PFILA2 fila, int loteryTicket) {
 	first = FirstFila2(fila);
 
 	if (first == SUCCESS) {
-		void *node;
-		node = GetAtIteratorFila2(fila);
-		tcb = (TCB_t*) node;
+		tcb = (TCB_t*) GetAtIteratorFila2(fila);
 
 		if (tcb->ticket == loteryTicket) {
 			DeleteAtIteratorFila2(fila);
@@ -178,7 +128,8 @@ TCB_t *searchForBestTicket(PFILA2 fila, int loteryTicket) {
 
 }
 
-int searchForTid(PFILA2 fila, int tid) {
+int searchForTid(PFILA2 fila, int tid)
+{
 	int first;
 	first = FirstFila2(fila);
 	if (first == SUCCESS) {
@@ -218,13 +169,12 @@ int searchForTid(PFILA2 fila, int tid) {
 
 }
 
-void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTerminated) {
+void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTerminated)
+{
 	int first;
 	first = FirstFila2(filaBloqueados);
 	if (first == SUCCESS) {
-		void *node;
-		node = GetAtIteratorFila2(filaBloqueados);
-		unjoin = (TCB_t*) node;
+		unjoin = (TCB_t*) GetAtIteratorFila2(filaBloqueados);
 		if (unjoin->tid == tidThreadTerminated) {
 			DeleteAtIteratorFila2(filaBloqueados);
 			AppendFila2(filaAptos, (void *) unjoin);
@@ -232,6 +182,7 @@ void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTermi
 		else {
 			int iterator = 0;
 			while (iterator == 0) {
+				void *node;
 				iterator = NextFila2(filaBloqueados);
 				node = GetAtIteratorFila2(filaBloqueados);
 				if (node == NULL) {
@@ -255,7 +206,8 @@ void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTermi
 }
 
 
-void runsThroughQueue(PFILA2 fila) {
+void runsThroughQueue(PFILA2 fila)
+{
 	int work;
 	work = FirstFila2(fila);
 	if (work == 0) {
