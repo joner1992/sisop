@@ -28,6 +28,7 @@ int main(int argc, char *argv[]) {
 	printf("Eu sou a main após a criação de ID0 e ID1\n");
 
 	i = cjoin(id0);
+	printf("Entre JOINS\n");
 	i = cjoin(id1);
 
 	printf("Eu sou a main voltando para terminar o programa\n");

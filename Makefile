@@ -16,7 +16,7 @@ INC_DIR=./include/
 BIN_DIR=./bin/
 SRC_DIR=./src/
 TST_DIR=./testes/
-CFLAGS=-m32 -c
+CFLAGS=-g -m32 -c
 
 all: lib
 

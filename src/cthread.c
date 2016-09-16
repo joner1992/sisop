@@ -33,7 +33,7 @@ ucontext_t contextDispatcher, contextTerminator;
 int tid = 1; //Mantém tid global para enumerar threads
 
 TCB_t *CPU; //Fila criada para "simular" a CPU;
-TCB_t *mainThread;
+TCB_t mainThread;
 FILA2 filaAptos;
 FILA2 filaBloqueados;
 int uninitializedDependencies = 1;
@@ -45,24 +45,34 @@ int uninitializedDependencies = 1;
 * ******************************     FUNÇÕES ESCALONADOR
 ********************************************************************************
 *******************************************************************************/
-void terminate(ucontext_t contextDispatcher, PFILA2 filaBloqueados, 
-               PFILA2 filaAptos, TCB_t *CPU);
+int clearCPU()
+{
+	if(CPU->tid != MAINTID){
+	  free(CPU->context.uc_stack.ss_sp);
+	  free(CPU);
+	  CPU = NULL;	
+	}
+  return SUCCESS;
+
+}
+
+void terminate()
 {
   //VERIFICAR FILA DE BLOQUEADOS -> SE ALGUM ESTIVER BLOQUEADO,
   //																DESBLOQUEIA O PROCESSO;
   // VERIFICAR FILA DE SEMÁFORO -> CWAIT() / CSIGNAL()
   // RETIRA PROCESSO DE ESTADO EXECUTANDO
   
-    printf("ENTROU NA FILA DE EXECUTANDO\n");
-    unjoinProcesses(filaBloqueados, filaAptos, CPU->tid);
-    clearCPU(CPU);
+    printf("ENTROU PARA TERMINATE\n");
+    unjoinProcesses(&filaBloqueados, &filaAptos, CPU->tid);
+    clearCPU();
     setcontext(&contextDispatcher);
 
 }
 
 
 
-void dispatch(PFILA2 filaAptos, PFILA2 executando, TCB_t *CPU)
+void dispatch()
 {
   // Gera bilhete de loteria  ++
   // Percorre fila para achar os que mais se aproximam ++
@@ -72,7 +82,7 @@ void dispatch(PFILA2 filaAptos, PFILA2 executando, TCB_t *CPU)
   TCB_t *nextProcess;
   int loteryTicket = generateTicket();
 
-  nextProcess = searchForBestTicket(filaAptos, loteryTicket);
+  nextProcess = searchForBestTicket(&filaAptos, loteryTicket);
   printf("TICKET: %d | TICKET ESCOLHIDO: %d | TID escolhido: %d\n", 
          loteryTicket, nextProcess->ticket, nextProcess->tid);
 
@@ -88,17 +98,6 @@ void dispatch(PFILA2 filaAptos, PFILA2 executando, TCB_t *CPU)
 ********************************************************************************
 *******************************************************************************/
 
-int clearCPU(TCB_t *CPU)
-{
-	if(CPU){
-	  free(CPU->context.ss_sp);
-	  free(CPU);
-	  CPU = NULL;	
-	}
-  return SUCCESS;
-
-}
-
 int createDispatcherContext()
 {
   getcontext(&contextDispatcher);
@@ -109,8 +108,8 @@ int createDispatcherContext()
     return ERROR; 
   }
   contextDispatcher.uc_stack.ss_size = stackSize;
-	makecontext(&contextDispatcher, (void(*)(void))dispatch, 2, 
-	&filaAptos, &executando, &CPU); 
+	makecontext(&contextDispatcher, (void(*)(void))dispatch,0); 
+	return SUCCESS;
 
 }
 
@@ -124,9 +123,8 @@ int createTerminatorContext()
     return ERROR; 
   } 
   contextTerminator.uc_stack.ss_size = stackSize;
-	makecontext(&contextTerminator, (void(*)(void))terminate, 4, 
-		&contextDispatcher, &filaBloqueados, &filaAptos, &CPU);
-  
+	makecontext(&contextTerminator, (void(*)(void))terminate,0);
+  return SUCCESS;
 
 }
 
@@ -139,30 +137,25 @@ int createBlockedQueue()
 
 int createMainContext() {
 	//gera Contexto da main
-	mainThread->tid = MAINTID;
-	mainThread->state = EXEC;
-	mainThread->ticket = generateTicket(); // Valor dummie
+	mainThread.tid = MAINTID;
+	mainThread.state = EXEC;
+	mainThread.ticket = generateTicket(); // Valor dummie
 
-	getcontext(&mainThread->context);
+	getcontext(&mainThread.context);
 
-	if (!mainThread) {
-		return ERROR;
+	printf("Criou Main Context.\n");
+	printf("Criou THREAD DE TID: %d | TICKET: %d\n", 
+	mainThread.tid, mainThread.ticket);
+
+	CPU = &mainThread;
+	if(CPU){
+		printf("Adicionou a CPU!\n");
+		return SUCCESS;
 	}
 	else {
-		printf("Criou Main Context.\n");
-		printf("Criou THREAD DE TID: %d | TICKET: %d\n", 
-			mainThread->tid, mainThread->ticket);
-
-		CPU = mainThread;
-		if(CPU){
-			printf("Adicionou a CPU!\n");
-			return SUCCESS;
-		}
-		else {
-			return ERROR;
-		}
-
+		return ERROR;
 	}
+
 }
 
 
@@ -180,12 +173,12 @@ int initialize()
   // Criar threads de dispatcher e terminate
   // Fila de semáforos irá ser criada apenas quando for necessária
 
-  int dispatcherContextCreated = 0;
-  int terminateContextCreated = 0;
+  int dispatcherContextCreated;
+  int terminateContextCreated;
 
-  int blockedQueueinitilized = 0;
-  int readyQueueinitilized = 0;
-  int mainContextCreated = 0;
+  int blockedQueueinitilized;
+  int readyQueueinitilized;
+  int mainContextCreated;
 
 
 
@@ -194,9 +187,9 @@ int initialize()
   readyQueueinitilized = createReadyQueue();
   mainContextCreated = createMainContext();
   dispatcherContextCreated = createDispatcherContext();
-  terminateContextCreated = createT
+  terminateContextCreated = createTerminatorContext();
 
-  if (mainContextCreated == ERROR ||
+  if (mainContextCreated == ERROR || 
       blockedQueueinitilized == ERROR || 
       readyQueueinitilized == ERROR || 
       dispatcherContextCreated == ERROR || 
@@ -268,19 +261,17 @@ int cjoin(int tid)
   // ENTRAR NA FILA DE BLOQUEADOS
   // SALVAR CONTEXTO ATUAL
   // SETAR CONTEXTO PARA DISPATCHER
-  int processTidExists;
-  processTidExists = searchForTid(&filaAptos, tid);
-  if (processTidExists == ERROR) {
+  if (searchForTid(&filaAptos, tid) == ERROR && 
+  	  searchForTid(&filaBloqueados, tid) == ERROR) {
     return ERROR;
+  }else{
+	  CPU->state = BLOQ;
+	  if(AppendFila2(&filaBloqueados, (void *) CPU) == SUCCESS){
+		  puts("ENTROU PARA BLOQUEADOS");
+	  }
   }
-  processTidExists = searchForTid(&filaBloqueados, tid);
-  if (processTidExists == ERROR) {
-    return ERROR;
-  }
-  CPU->state = BLOQ;
-  AppendFila2(&filaBloqueados, (void *) CPU);
   swapcontext(&CPU->context, &contextDispatcher);
-
+  return SUCCESS;
 
 }
 
@@ -336,8 +327,7 @@ int csignal(csem_t *sem)
 
 int cidentify(char *name, int size)
 {
-  char groupName[] = "Nome: Filipe Joner Cartao: 208840\n
-  Nome: Jean Andrade Cartao: 252846\nNome: Rodrigo Dal Ri Cartao: 244936";
+  char groupName[] = "Nome: Filipe Joner Cartao: 208840\nNome: Jean Andrade Cartao: 252846\nNome: Rodrigo Dal Ri Cartao: 244936";
   int realSize = sizeof(groupName);
   int i = 0;
   if (size <= 0 || size > realSize) {

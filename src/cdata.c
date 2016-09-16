@@ -75,6 +75,7 @@ TCB_t *searchForBestTicket(PFILA2 fila, int loteryTicket)
 		else {
 			bestValue = abs(tcb->ticket - loteryTicket);
 			bestTID = tcb->tid;
+			void *node;
 
 			int iterator = 0;
 			while (iterator == SUCCESS) {
@@ -171,18 +172,23 @@ int searchForTid(PFILA2 fila, int tid)
 
 void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTerminated)
 {
+	puts("ENTROU UNJOIN \n");
 	int first;
 	first = FirstFila2(filaBloqueados);
+	void *node;
 	if (first == SUCCESS) {
+		puts("ENTROU NA FILA BLOQUEADOS");
 		unjoin = (TCB_t*) GetAtIteratorFila2(filaBloqueados);
+		node = GetAtIteratorFila2(filaBloqueados);
 		if (unjoin->tid == tidThreadTerminated) {
+			printf("Tirou de bloqueados thread de TID: %d\n",unjoin->tid);
 			DeleteAtIteratorFila2(filaBloqueados);
 			AppendFila2(filaAptos, (void *) unjoin);
 		}
 		else {
 			int iterator = 0;
 			while (iterator == 0) {
-				void *node;
+				
 				iterator = NextFila2(filaBloqueados);
 				node = GetAtIteratorFila2(filaBloqueados);
 				if (node == NULL) {
@@ -191,6 +197,7 @@ void unjoinProcesses(PFILA2 filaBloqueados, PFILA2 filaAptos, int tidThreadTermi
 				else {
 					unjoin = (TCB_t*) node;
 					if (unjoin->tid == tidThreadTerminated) {
+						printf("Tirou de bloqueados thread de TID: %d\n",unjoin->tid);
 						DeleteAtIteratorFila2(filaBloqueados);
 						AppendFila2(filaAptos, (void *) unjoin);
 					}
