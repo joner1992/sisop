@@ -8,20 +8,27 @@
 #include "../include/support.h"
 #include "../include/cthread.h"
 
-void* ImprimeDez(void *arg) {
-
-	printf("Works?");
-	return (void*)NULL;
+void* func0(void *arg) {
+	printf("Eu sou a thread ID0 imprimindo %d\n", *((int *)arg));
+	return;
 }
 
+void* func1(void *arg) {
+	printf("Eu sou a thread ID1 imprimindo %d\n", *((int *)arg));
+}
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
 
-	int valor = atoi(argv[0]);
-	int i=0;
-	for(i; i< 10; i++){
-		int a = ccreate(ImprimeDez, (void*)&valor);
-	}
+	int	id0, id1;
+	int i;
 
-	return 0;
+	id0 = ccreate(func0, (void *)&i);
+	id1 = ccreate(func1, (void *)&i);
+
+	printf("Eu sou a main após a criação de ID0 e ID1\n");
+
+	i = cjoin(id0);
+	i = cjoin(id1);
+
+	printf("Eu sou a main voltando para terminar o programa\n");
 }

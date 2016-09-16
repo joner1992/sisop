@@ -27,24 +27,56 @@
 * VARIÁVEIS GLOBAIS
 ************/
 
+ucontext_t contextDispatcher, contextTerminate; // Contextos para execução de funções de escalonador e de finalizador de threads
+
 int tid = 1; //Mantém tid global para enumerar threads
 
-
+FILA2 executando; //Fila criada para "simular" a CPU;
 FILA2 filaAptos;
 FILA2 filaBloqueados;
 int uninitializedDependencies = 1;
 
 
-/**************
-* FUNÇÕES AUXILIARES
-**************/
+
+/*************************************************************************************************************
+***********************************************************************************
+* ******************************     FUNÇÕES AUXILIARES E DE INICIALIZAÇÃO
+***********************************************************************************
+*************************************************************************************************************/
+int createDispatcherContext() {
+	getcontext(&contextDispatcher);
+	printf("dispatch\n");
+	contextDispatcher.uc_link = 0;
+	contextDispatcher.uc_stack.ss_sp = (char*) malloc(stackSize);
+	if (contextDispatcher.uc_stack.ss_sp == NULL) {
+		return ERROR; // Erro ao alocar espaço para thread
+	}
+
+	contextDispatcher.uc_stack.ss_size = stackSize;
+	makecontext(&contextDispatcher, (void(*)(void))dispatch, 2, &filaAptos, &executando);
+
+	return SUCCESS;
+}
+
+int createTerminaterContext() {
+	getcontext(&contextTerminate);
+	contextTerminate.uc_link = 0;
+	contextTerminate.uc_stack.ss_sp = (char*) malloc(stackSize);
+	if (contextTerminate.uc_stack.ss_sp == NULL) {
+		return ERROR; // Erro ao alocar espaço para thread
+	}
+
+	contextTerminate.uc_stack.ss_size = stackSize;
+	makecontext(&contextTerminate, (void(*)(void))terminate, 4, &contextDispatcher, &filaBloqueados, &filaAptos, &executando);
+	return SUCCESS;
+}
 
 
 int createMainContext() {
 	//gera Contexto da main
 	TCB_t *mainThread = (TCB_t*) malloc(sizeof(TCB_t));
 	mainThread->tid = MAINTID;
-	mainThread->state = APTO;
+	mainThread->state = EXEC;
 	mainThread->ticket = generateTicket(); // Valor dummie
 
 	getcontext(&mainThread->context);
@@ -56,10 +88,10 @@ int createMainContext() {
 		printf("Criou Main Context.\n");
 		printf("Criou THREAD DE TID: %d | TICKET: %d\n", mainThread->tid, mainThread->ticket);
 
-		int addedToReadyQueue;
-		addedToReadyQueue = AppendFila2(&filaAptos, (void *) mainThread);
-		if (addedToReadyQueue == SUCCESS) {
-			printf("Adicionou na fila de aptos!\n");
+		int addedToExecutingQueue;
+		addedToExecutingQueue = AppendFila2(&executando, (void *) mainThread);
+		if (addedToExecutingQueue == SUCCESS) {
+			printf("Adicionou na fila de EXECUCAO!\n");
 			return SUCCESS;
 		}
 		else {
@@ -72,7 +104,7 @@ int createMainContext() {
 int createBlockedQueue() {
 	//Inicializa fila de bloqueados
 	return createQueue(&filaBloqueados);
-	
+
 }
 
 
@@ -88,18 +120,28 @@ int initialize() {
 	// Criar MainContext
 	// Criar fila de bloqueados
 	// Criar fila de aptos
+	// Criar threads de dispatcher e terminate
 	// Fila de semáforos irá ser criada apenas quando for necessária
 
-	int readyQueueinitilized = 0;
+	int dispatcherContextCreated = 0;
+	int terminateContextCreated = 0;
+
 	int blockedQueueinitilized = 0;
+	int readyQueueinitilized = 0;
 	int mainContextCreated = 0;
 
+
+
 	blockedQueueinitilized = createBlockedQueue();
-	printf("Checou no initialize!\n");
+	printf("Chegou no initialize!\n");
 	readyQueueinitilized = createReadyQueue();
 	mainContextCreated = createMainContext();
+	dispatcherContextCreated = createDispatcherContext();
+	terminateContextCreated = createTerminaterContext();
 
-	if (mainContextCreated == ERROR || blockedQueueinitilized == ERROR || readyQueueinitilized == ERROR) {
+	if (mainContextCreated == ERROR ||
+	        blockedQueueinitilized == ERROR || readyQueueinitilized == ERROR
+	        || dispatcherContextCreated == ERROR || terminateContextCreated == ERROR ) {
 		return ERROR;
 	}
 	else {
@@ -109,8 +151,11 @@ int initialize() {
 }
 
 
-/****************
-*****************/
+/*************************************************************************************************************
+***********************************************************************************
+* ******************************     FUNÇÕES QUE DEVEM SER NECESSARIAMENTE IMPLEMENTADAS
+***********************************************************************************
+*************************************************************************************************************/
 int ccreate(void* (*start)(void*), void *arg) {
 
 	if (uninitializedDependencies == 1) {
@@ -128,14 +173,13 @@ int ccreate(void* (*start)(void*), void *arg) {
 
 	getcontext(&newThread->context);
 
-	newThread->context.uc_link = 0;
 	newThread->context.uc_stack.ss_sp = (char*) malloc(stackSize);
 
 	if (newThread->context.uc_stack.ss_sp == NULL) {
 		return ERROR; // Erro ao alocar espaço para thread
 	}
-
 	newThread->context.uc_stack.ss_size = stackSize;
+	newThread->context.uc_link = &contextTerminate;
 
 	makecontext(&newThread->context, (void(*)(void))start, 1, arg);
 
@@ -147,13 +191,11 @@ int ccreate(void* (*start)(void*), void *arg) {
 	addedToReadyQueue = AppendFila2(&filaAptos, (void *) newThread);
 	if (addedToReadyQueue == SUCCESS) {
 		printf("Adicionou na fila de aptos!\n");
-		return newThread->tid;;
+		return newThread->tid;
 	}
 	else {
 		return ERROR;
 	}
-
-
 }
 
 int cyield(void) {
@@ -175,8 +217,41 @@ int cjoin(int tid) {
 		}
 	}
 
-	return ERROR;
+	//VERIFICA DE tid existe
+	// SAIR DA FILA DE EXECUÇAO
+	// ENTRAR NA FILA DE BLOQUEADOS
+	// SALVAR CONTEXTO ATUAL
+	// SETAR CONTEXTO PARA DISPATCHER
 
+	int processTidExists;
+	processTidExists = searchForTid(&filaAptos, tid);
+	if (processTidExists == ERROR) {
+		return ERROR;
+	}
+
+	int first;
+	first = FirstFila2(&executando);
+	if (first == SUCCESS) {
+		void *node;
+		node = GetAtIteratorFila2(&executando);
+		TCB_t *tcb = (TCB_t*) malloc(sizeof(TCB_t));
+		tcb = (TCB_t*) node;
+		int deleted;
+		deleted = DeleteAtIteratorFila2(&executando);
+		if(deleted == SUCCESS){
+			tcb->state = BLOQ;
+			int addedToBlockedQueue;
+			addedToBlockedQueue = AppendFila2(&filaBloqueados, (void *) tcb);
+			if (addedToBlockedQueue == SUCCESS) {
+				swapcontext(&tcb->context, &contextDispatcher);
+			}
+		}
+		else{
+			printf("Deu ruin na fila exectudando no cjoin");
+			return ERROR;
+		}
+	}
+	return SUCCESS;
 }
 
 int csem_init(csem_t *sem, int count) {
@@ -231,9 +306,8 @@ int cidentify(char *name, int size) {
 
 
 
-/***************
-* FUNÇÕES DE TESTE
-****************/
-void percorreFilaAptos(){
-	runsThroughQueue(&filaAptos);
-}
+/*************************************************************************************************************
+***********************************************************************************
+* ******************************     FUNÇÕES DE TESTESS
+***********************************************************************************
+*************************************************************************************************************/
