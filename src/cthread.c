@@ -28,11 +28,13 @@
 ************/
 
 // Contextos para execução de funções de escalonador e de finalizador de threads
-ucontext_t contextDispatcher, contextTerminator; 
+ucontext_t contextDispatcher, contextTerminator;
 
 int tid = 1; //Mantém tid global para enumerar threads
 
-TCB_t *CPU; //Fila criada para "simular" a CPU;
+
+BLOCK_join *joinPtr; //Ponteiro criado para iterar sobre fila de bloqueados por Join
+TCB_t *CPU; //Ponteiro criada para "simular" a CPU;
 TCB_t mainThread;
 FILA2 filaAptos;
 FILA2 filaBloqueados;
@@ -48,19 +50,90 @@ int uninitializedDependencies = 1;
 *******************************************************************************/
 int clearCPU()
 {
-	if(CPU->tid != MAINTID){
-	  free(CPU->context.uc_stack.ss_sp);
-	  free(CPU);
-	  CPU = NULL;	
-	}
+  if (CPU->tid != MAINTID) {
+    free(CPU->context.uc_stack.ss_sp);
+    free(CPU);
+    CPU = NULL;
+  }
   return SUCCESS;
 
 }
 
-void unjoinProcesses(int tidThreadTerminated)
+void removeThreadFromBlockedQueue(threadID)
 {
-  AppendFila2(&filaAptos, (void *) &mainThread);
-  return;
+  // Procura na filaBloqueados por threadID
+  // Retira ela da filaBloqueados e adiciona na filaAptos
+  TCB_t *ptr;
+
+  if(FirstFila2(&filaBloqueados) == SUCCESS){
+    ptr = (TCB_t *) GetAtIteratorFila2(&filaBloqueados);
+    if(ptr->tid == threadID){
+      AppendFila2(&filaAptos, (void *) ptr);
+      DeleteAtIteratorFila2(&filaBloqueados);
+      return;
+    }
+    else{
+      int iterator = 0;
+      while(iterator == 0){
+        iterator = NextFila2(&filaBloqueados);
+        ptr = (TCB_t *) GetAtIteratorFila2(&filaBloqueados);
+        if(!ptr){
+          return;
+        }
+        else{
+          if(ptr->tid == threadID){
+            AppendFila2(&filaAptos, (void *) ptr);
+            DeleteAtIteratorFila2(&filaBloqueados);
+          }
+        }
+      }
+      return;
+    }
+
+  }
+  else{
+    return;
+  }
+
+}
+
+void verifyJoinedProcesses(int tidThreadTerminated)
+{
+  // Verificar se EM TODA A filaJoin existe um joinPtr->tid com valor de CPU->tid
+  // Se existir, retira o processo de tid = joinPtr->threadWaiting da filaBloqueados
+  // E dá free em joinPtr malloc BLOCK_join
+  // se não existir retorna;
+ 
+
+  if (FirstFila2(&filaJoin) == SUCCESS) {
+    joinPtr = (BLOCK_join *) GetAtIteratorFila2(&filaJoin);
+    if(joinPtr->tid == tidThreadTerminated){
+      removeThreadFromBlockedQueue(joinPtr->threadWaiting);
+      DeleteAtIteratorFila2(&filaJoin);
+      free(joinPtr);
+      joinPtr = NULL;
+    }
+    int iterator = 0;
+    while (iterator == 0) {
+      iterator = NextFila2(&filaJoin);
+      joinPtr = (BLOCK_join *) GetAtIteratorFila2(&filaJoin);
+      if(!joinPtr){
+        return;
+      }
+      else{
+        if(joinPtr->tid == tidThreadTerminated){
+          removeThreadFromBlockedQueue(joinPtr->threadWaiting);
+          DeleteAtIteratorFila2(&filaJoin);
+          free(joinPtr);
+          joinPtr = NULL;
+        }
+      }
+    }
+    return;
+  }
+  else{
+    return;
+  }
 }
 
 
@@ -68,17 +141,38 @@ void unjoinProcesses(int tidThreadTerminated)
 void terminate()
 {
   //VERIFICAR FILA DE BLOQUEADOS -> SE ALGUM ESTIVER BLOQUEADO,
-  //																DESBLOQUEIA O PROCESSO;
+  //                                DESBLOQUEIA O PROCESSO;
   // VERIFICAR FILA DE SEMÁFORO -> CWAIT() / CSIGNAL()
   // RETIRA PROCESSO DE ESTADO EXECUTANDO
-  
-    printf("ENTROU PARA TERMINATE\n");
-    unjoinProcesses(CPU->tid);
-    clearCPU();
-    setcontext(&contextDispatcher);
 
+  printf("ENTROU PARA TERMINATE\n");
+  verifyJoinedProcesses(CPU->tid);
+  clearCPU();
+  setcontext(&contextDispatcher);
 }
 
+void selectProcess(int bestTID){
+  int first = FirstFila2(&filaAptos);
+  if ( first == SUCCESS){
+    CPU = (TCB_t *) GetAtIteratorFila2(&filaAptos);
+    if(CPU->tid == bestTID){
+      DeleteAtIteratorFila2(&filaAptos);
+      return;
+    }
+    else{
+      int iterator=0;
+      while(iterator == 0){
+        iterator = NextFila2(&filaAptos);
+        CPU = (TCB_t *) GetAtIteratorFila2(&filaAptos);
+        if(CPU->tid == bestTID){
+          DeleteAtIteratorFila2(&filaAptos);
+          return;
+        }
+      }
+    }
+  }
+  return;
+}
 
 
 void dispatch()
@@ -88,15 +182,15 @@ void dispatch()
   // Seleciona a thread a ser executada ++
   // retira ela da fila de aptos ++
   // faz swap para o contexto selecionado ++
-  TCB_t *nextProcess;
   int loteryTicket = generateTicket();
+  int bestTID;
+  bestTID = searchForBestTicket(&filaAptos, loteryTicket);
 
-  nextProcess = searchForBestTicket(&filaAptos, loteryTicket);
-  printf("TICKET: %d | TICKET ESCOLHIDO: %d | TID escolhido: %d\n", 
-         loteryTicket, nextProcess->ticket, nextProcess->tid);
+  selectProcess(bestTID);
+  printf("TICKET: %d | TICKET ESCOLHIDO: %d | TID escolhido: %d\n",
+         loteryTicket, CPU->ticket, CPU->tid);
+  CPU->state = EXEC;
 
-  nextProcess->state = EXEC;
-  CPU = nextProcess;
   setcontext(&CPU->context);
 }
 
@@ -114,11 +208,11 @@ int createDispatcherContext()
   contextDispatcher.uc_link = 0;
   contextDispatcher.uc_stack.ss_sp = (char*) malloc(stackSize);
   if (contextDispatcher.uc_stack.ss_sp == NULL) {
-    return ERROR; 
+    return ERROR;
   }
   contextDispatcher.uc_stack.ss_size = stackSize;
-	makecontext(&contextDispatcher, (void(*)(void))dispatch,0); 
-	return SUCCESS;
+  makecontext(&contextDispatcher, (void(*)(void))dispatch, 0);
+  return SUCCESS;
 
 }
 
@@ -129,10 +223,10 @@ int createTerminatorContext()
   contextTerminator.uc_link = 0;
   contextTerminator.uc_stack.ss_sp = (char*) malloc(stackSize);
   if (contextTerminator.uc_stack.ss_sp == NULL) {
-    return ERROR; 
-  } 
+    return ERROR;
+  }
   contextTerminator.uc_stack.ss_size = stackSize;
-	makecontext(&contextTerminator, (void(*)(void))terminate,0);
+  makecontext(&contextTerminator, (void(*)(void))terminate, 0);
   return SUCCESS;
 
 }
@@ -144,30 +238,30 @@ int createBlockedQueue()
 
 }
 
-int createJoinQueue(){
+int createJoinQueue() {
   return createQueue(&filaJoin);
 }
 
 int createMainContext() {
-	//gera Contexto da main
-	mainThread.tid = MAINTID;
-	mainThread.state = EXEC;
-	mainThread.ticket = generateTicket(); // Valor dummie
+  //gera Contexto da main
+  mainThread.tid = MAINTID;
+  mainThread.state = EXEC;
+  mainThread.ticket = generateTicket(); // Valor dummie
 
-	getcontext(&mainThread.context);
+  getcontext(&mainThread.context);
 
-	printf("Criou Main Context.\n");
-	printf("Criou THREAD DE TID: %d | TICKET: %d\n", 
-	mainThread.tid, mainThread.ticket);
+  printf("Criou Main Context.\n");
+  printf("Criou THREAD DE TID: %d | TICKET: %d\n",
+         mainThread.tid, mainThread.ticket);
 
-	CPU = &mainThread;
-	if(CPU){
-		printf("Adicionou a CPU!\n");
-		return SUCCESS;
-	}
-	else {
-		return ERROR;
-	}
+  CPU = &mainThread;
+  if (CPU) {
+    printf("Adicionou a CPU!\n");
+    return SUCCESS;
+  }
+  else {
+    return ERROR;
+  }
 
 }
 
@@ -204,12 +298,12 @@ int initialize()
   dispatcherContextCreated = createDispatcherContext();
   terminateContextCreated = createTerminatorContext();
 
-  if (mainContextCreated == ERROR || 
-      blockedQueueinitilized == ERROR || 
-      joinQueueinitilized == ERROR ||
-      readyQueueinitilized == ERROR || 
-      dispatcherContextCreated == ERROR || 
-      terminateContextCreated == ERROR) {
+  if (mainContextCreated == ERROR ||
+          blockedQueueinitilized == ERROR ||
+          joinQueueinitilized == ERROR ||
+          readyQueueinitilized == ERROR ||
+          dispatcherContextCreated == ERROR ||
+          terminateContextCreated == ERROR) {
     return ERROR;
   }
   else {
@@ -256,7 +350,7 @@ int ccreate(void* (*start)(void*), void *arg)
 
 
   tid++;
-  printf("Criou THREAD DE TID: %d | TICKET: %d\n", 
+  printf("Criou THREAD DE TID: %d | TICKET: %d\n",
          newThread->tid, newThread->ticket);
 
   int addedToReadyQueue;
@@ -272,23 +366,26 @@ int ccreate(void* (*start)(void*), void *arg)
 
 int cjoin(int tid)
 {
-	// VERIFICA DE tid existe na fila de Aptos ou Bloqueados ++
+  // VERIFICA DE tid existe na fila de Aptos ou Bloqueados ++
   // SAIR DA FILA DE EXECUÇAO
   // ENTRAR NA FILA DE BLOQUEADOS
   // SALVAR CONTEXTO ATUAL
   // SETAR CONTEXTO PARA DISPATCHER
-  if (searchForTid(&filaAptos, tid) == ERROR && 
-  	  searchForTid(&filaBloqueados, tid) == ERROR) {
+  if (searchForTid(&filaAptos, tid) == ERROR &&
+          searchForTid(&filaBloqueados, tid) == ERROR) {
     return ERROR;
-  }else{
-	  CPU->state = BLOQ;
-	  if(AppendFila2(&filaBloqueados, (void *) CPU) == SUCCESS){
-		  puts("ENTROU PARA BLOQUEADOS");
-	  }
-  }
-  swapcontext(&CPU->context, &contextDispatcher);
-  return SUCCESS;
-
+  } else {
+    CPU->state = BLOQ;
+    BLOCK_join *newPair = (BLOCK_join*) malloc(sizeof(BLOCK_join));
+    newPair->tid = tid;
+    newPair->threadWaiting = CPU->tid;
+    if(AppendFila2(&filaJoin, (void *) newPair) == SUCCESS &&
+      AppendFila2(&filaBloqueados, (void *) CPU) == SUCCESS){
+      puts("ENTROU PARA BLOQUEADOS");
+    }
+    swapcontext(&CPU->context, &contextDispatcher);
+    return SUCCESS;
+  }   
 }
 
 int cyield(void)
@@ -300,7 +397,7 @@ int cyield(void)
     }
   }
 
-   
+
   return ERROR;
 }
 
