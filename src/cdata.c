@@ -120,6 +120,33 @@ int searchForTid(PFILA2 fila, int tid)
 
 }
 
+int searchInFilaJoin(PFILA2 filaJoin, int tid) {
+  int first;
+  first = FirstFila2(filaJoin);
+  if (first == 0) {
+    BLOCK_join *ptr;
+    ptr = (BLOCK_join *)GetAtIteratorFila2(filaJoin);
+    if (ptr->tid == tid) {
+      printf("JA EXISTE ALGUMA THREAD DE TID: %d ESPERANDO.\n", tid);
+      return ERROR;
+    }
+    int iterator = 0;
+    while (iterator == 0) {
+      iterator = NextFila2(filaJoin);
+      ptr = (BLOCK_join *)GetAtIteratorFila2(filaJoin);
+      if(!GetAtIteratorFila2(filaJoin)){
+        return SUCCESS;
+      }
+      else if (ptr->tid == tid) {
+        printf("JA EXISTE ALGUMA THREAD DE TID: %d ESPERANDO.\n", tid);
+        return ERROR;
+      }
+    }
+  }
+
+  return SUCCESS;
+}
+
 
 
 void runsThroughQueue(PFILA2 fila)

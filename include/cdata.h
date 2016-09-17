@@ -36,5 +36,6 @@ int generateTicket();
 void runsThroughQueue(PFILA2 fila);
 int searchForBestTicket(PFILA2 fila, int loteryTicket);
 int searchForTid(PFILA2 fila, int tid);
+int searchInFilaJoin(PFILA2 filaJoin, int tid);
 
 #endif

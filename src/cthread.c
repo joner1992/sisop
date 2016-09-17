@@ -70,6 +70,7 @@ void removeThreadFromBlockedQueue(threadID)
     if(ptr->tid == threadID){
       AppendFila2(&filaAptos, (void *) ptr);
       DeleteAtIteratorFila2(&filaBloqueados);
+      printf("DESBLOQUEOU TID %d \n", ptr->tid);
       return;
     }
     else{
@@ -84,6 +85,7 @@ void removeThreadFromBlockedQueue(threadID)
           if(ptr->tid == threadID){
             AppendFila2(&filaAptos, (void *) ptr);
             DeleteAtIteratorFila2(&filaBloqueados);
+            printf("DESBLOQUEOU TID %d \n", ptr->tid);
           }
         }
       }
@@ -366,15 +368,24 @@ int ccreate(void* (*start)(void*), void *arg)
 
 int cjoin(int tid)
 {
-  // VERIFICA DE tid existe na fila de Aptos ou Bloqueados ++
-  // SAIR DA FILA DE EXECUÇAO
-  // ENTRAR NA FILA DE BLOQUEADOS
+  // VERIFICA DE tid existe na filaAptos ou filaBloqueados ++
+  // VERIFICA SE tid JÁ EXISTE NA filaJoin, ou seja, 
+  //      se uma thread já está esperando por esse tid
+  // ADD THREAD NA filaBloqueados e PAR tid, threadWaiting na filaJoin
+  // SAIR DE EXECUÇÃO
   // SALVAR CONTEXTO ATUAL
   // SETAR CONTEXTO PARA DISPATCHER
+
+
   if (searchForTid(&filaAptos, tid) == ERROR &&
-          searchForTid(&filaBloqueados, tid) == ERROR) {
+      searchForTid(&filaBloqueados, tid) == ERROR) {
     return ERROR;
-  } else {
+  }
+
+  if(searchInFilaJoin(&filaJoin, tid) == ERROR){
+    return ERROR;
+  }
+  else {
     CPU->state = BLOQ;
     BLOCK_join *newPair = (BLOCK_join*) malloc(sizeof(BLOCK_join));
     newPair->tid = tid;

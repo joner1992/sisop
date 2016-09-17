@@ -19,6 +19,7 @@ void* func0(void *arg) {
 
 void* func1(void *arg) {
 	printf("Eu sou a thread ID1 imprimindo %d\n", *((int *)arg));
+	int i = cjoin(2);
 	cyield();
 	puts("TERIA QUE PRINTAR AQUI, MAS ESCALONADOR CHAMOU ANTES!");
 }
@@ -34,8 +35,6 @@ int main(int argc, char *argv[]) {
 	id2 = ccreate(func1, (void *)&i);
 	id3 = ccreate(func1, (void *)&i);
 	id4 = ccreate(func1, (void *)&i);
-	id5 = ccreate(func1, (void *)&i);
-	id6 = ccreate(func1, (void *)&i);
 
 	printf("Eu sou a main após a criação de ID0 e ID1\n");
 
@@ -44,8 +43,6 @@ int main(int argc, char *argv[]) {
 	i = cjoin(id2);
 	i = cjoin(id3);
 	i = cjoin(id4);
-	i = cjoin(id5);
-	i = cjoin(id6);
 
 	printf("Eu sou a main voltando para terminar o programa\n");
 }
