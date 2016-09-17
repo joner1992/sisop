@@ -10,11 +10,17 @@
 
 void* func0(void *arg) {
 	printf("Eu sou a thread ID0 imprimindo %d\n", *((int *)arg));
+
+	cyield();
+	puts("TERIA QUE PRINTAR AQUI, MAS ESCALONADOR CHAMOU ANTES!");
+
 	return;
 }
 
 void* func1(void *arg) {
 	printf("Eu sou a thread ID1 imprimindo %d\n", *((int *)arg));
+	cyield();
+	puts("TERIA QUE PRINTAR AQUI, MAS ESCALONADOR CHAMOU ANTES!");
 }
 
 int main(int argc, char *argv[]) {

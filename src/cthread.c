@@ -390,6 +390,10 @@ int cjoin(int tid)
 
 int cyield(void)
 {
+  //MUDA ESTADO PARA APTO
+  //RETIRA DA CPU
+  //FAZ SWAP CONTEXT COM DISPATCHER
+
   if (uninitializedDependencies == 1) {
     uninitializedDependencies = initialize();
     if (uninitializedDependencies == ERROR) {
@@ -397,8 +401,14 @@ int cyield(void)
     }
   }
 
-
+  CPU->state = APTO;
+  if( FirstFila2(&filaAptos) == SUCCESS &&
+      AppendFila2(&filaAptos, (void *) CPU) == SUCCESS){
+      swapcontext(&CPU->context, &contextDispatcher);
+      return SUCCESS;
+  }
   return ERROR;
+
 }
 
 int csem_init(csem_t *sem, int count)
