@@ -358,7 +358,7 @@ int ccreate(void* (*start)(void*), void *arg)
   int addedToReadyQueue;
   addedToReadyQueue = AppendFila2(&filaAptos, (void *) newThread);
   if (addedToReadyQueue == SUCCESS) {
-    printf("Adicionou na fila de aptos!\n");
+    // printf("Adicionou na fila de aptos!\n");
     return newThread->tid;
   }
   else {

@@ -99,7 +99,7 @@ int searchForTid(PFILA2 fila, int tid)
         iterator = NextFila2(fila);
         tcb = GetAtIteratorFila2(fila);
         if (tcb == NULL) {
-          printf("DEU RUIM tid para join\n");
+          printf("TID nao encontrado em filaAptos ou filaBloqueados\n");
           return ERROR;
         }
         else {
@@ -114,7 +114,7 @@ int searchForTid(PFILA2 fila, int tid)
     }
   }
   else {
-    printf("DEU RUIM tid para join\n");
+    printf("TID nao encontrado em filaAptos ou filaBloqueados\n");
     return ERROR;
   }
 

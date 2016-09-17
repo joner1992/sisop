@@ -1,5 +1,5 @@
 /**
-** Teste da função generateTicket
+** Teste da função ccreate
 **/
 
 #include <stdio.h>
@@ -36,13 +36,13 @@ int main(int argc, char *argv[]) {
 	id3 = ccreate(func1, (void *)&i);
 	id4 = ccreate(func1, (void *)&i);
 
-	printf("Eu sou a main após a criação de ID0 e ID1\n");
+	printf("Eu sou a main após a criação de threads\n");
 
-	i = cjoin(id0);
-	i = cjoin(id1);
-	i = cjoin(id2);
-	i = cjoin(id3);
-	i = cjoin(id4);
+	// i = cjoin(id0);
+	// i = cjoin(id1);
+	// i = cjoin(id2);
+	// i = cjoin(id3);
+	// i = cjoin(id4);
 
-	printf("Eu sou a main voltando para terminar o programa\n");
+	// printf("Eu sou a main voltando para terminar o programa\n");
 }
