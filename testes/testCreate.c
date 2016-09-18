@@ -11,17 +11,12 @@
 void* func0(void *arg) {
 	printf("Eu sou a thread ID0 imprimindo %d\n", *((int *)arg));
 
-	cyield();
-	puts("TERIA QUE PRINTAR AQUI, MAS ESCALONADOR CHAMOU ANTES!");
-
 	return;
 }
 
 void* func1(void *arg) {
 	printf("Eu sou a thread ID1 imprimindo %d\n", *((int *)arg));
-	int i = cjoin(2);
-	cyield();
-	puts("TERIA QUE PRINTAR AQUI, MAS ESCALONADOR CHAMOU ANTES!");
+	return;
 }
 
 int main(int argc, char *argv[]) {
@@ -38,11 +33,5 @@ int main(int argc, char *argv[]) {
 
 	printf("Eu sou a main após a criação de threads\n");
 
-	// i = cjoin(id0);
-	// i = cjoin(id1);
-	// i = cjoin(id2);
-	// i = cjoin(id3);
-	// i = cjoin(id4);
-
-	// printf("Eu sou a main voltando para terminar o programa\n");
+	return 0;
 }
