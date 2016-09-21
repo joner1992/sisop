@@ -39,6 +39,7 @@ TCB_t mainThread;
 FILA2 filaAptos;
 FILA2 filaBloqueados;
 FILA2 filaJoin;
+FILA2 filaSem;
 int uninitializedDependencies = 1;
 
 
@@ -430,9 +431,16 @@ int csem_init(csem_t *sem, int count)
       return ERROR;
     }
   }
-
-  return ERROR;
+  
+  createQueue(&filaSem);
+  
+  csem_t *sem = (csem_t*) malloc(sizeof(csem_t));
+  sem->count = 1;
+  sem->fila = *filaSem;
+  
+  return SUCCESS;
 }
+
 
 int cwait(csem_t *sem)
 {
@@ -443,8 +451,20 @@ int cwait(csem_t *sem)
     }
   }
 
+  if(sem->count<=0){
+	   CPU->state = BLOQ;
+	   AppendFila2(&filaSem, (void *) CPU);
+	   
+	   swapcontext(&CPU->context, &contextDispatcher);
+  }
+  
+  else{
+	//segue o baile
+ }
+   
+  sem->count = (sem->count) - 1;
 
-  return ERROR;
+  return SUCCESS;
 }
 
 int csignal(csem_t *sem)
@@ -455,8 +475,21 @@ int csignal(csem_t *sem)
       return ERROR;
     }
   }
+  
+  FirstFila2(PFILA2 filaSem);
+  
+  CPU = (TCB_t*) GetAtIteratorFila2(filaSem);
+  CPU->state = APTO;	
+  
+  DeleteAtIteratorFila2(PFILA2 filaSem);
+    
+  AppendFila2(PFILA2 filaAptos, void *CPU);
+  
+  sem->count = (sem->count) + 1;
 
-  return ERROR;
+  swapcontext(&CPU->context, &contextDispatcher);
+  
+  return SUCCESS;
 }
 
 int cidentify(char *name, int size)
