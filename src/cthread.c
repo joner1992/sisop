@@ -450,7 +450,11 @@ int cwait(csem_t *sem)
     }
   }
 
-  // decrementa 1 do counter
+  if(!sem){
+    return ERROR;
+  }
+
+  // decrementa 1 do counter ++
   // Verifica se counter > 0
   // se for maior que zero, return SUCCESS
   // se não foi maior que zero
@@ -459,6 +463,8 @@ int cwait(csem_t *sem)
   //  adiciona tcb à fila de espera 
   //  muda estado da thread de Exec para Bloq
   //  muda contexto para dipatcher (swapcontext)
+
+  sem->count--;
 
 
 
@@ -478,6 +484,13 @@ int csignal(csem_t *sem)
   // Verifica se existe fila de bloqueados de semáforo
   //    se existir transfere primeiro TCB da fila FIFO para fila de aptos
   // Retorna SUCCESS
+
+  if(!sem){
+    return ERROR;
+  }
+
+
+  sem->count++;
 
 
 
