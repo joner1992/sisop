@@ -1,0 +1,27 @@
+
+  Documentação Testes Unitários - Trabalho Prático I
+  
+  testCreate.c - Função de teste da criação de threads.
+Espera-se que as threads sejam criadas e id0 printe o tid 0, id1 printe o tid 1 e assim sucessivamente.
+Por final printa-se a mensagem da main após a criação de todas as threads.
+
+  testIdentify.c - Função de teste da identificação do grupo.
+Testa-se se o argumento passado excede o limite máximo. 
+Quando passamos um tamanho maior que 104 é mostrada uma mensagem de erro. 
+Logo após passamos como argumento o tamanho 104 e a identificação do grupo é printada.
+  
+  testJoin.c - Função de teste join.
+Espera-se que id0 printe 0 e id1 printe 1.
+A main printa logo após a criação de id0 e id1.
+Damos o comando cjoin(id0) e cjoin(id1), após essas duas threads finalizarem a main volta e printa uma mensagem indicando que irá finalizar o programa.
+
+  testYield.c - Função de testes da yeld().
+Espera-se que quando as threads sejam criadas seja printado o seu tid, então é dado o comando cyield. Assim printando o tid de todas as threads.
+Depois a main da o comando cyield() voltando para as threads que printam uma mensagem indicando que voltaram de uma cyield, volta para main que também printa uma mensagem indicando que voltou do primeiro cyeld, isso ocorre cinco vezes.
+Após a main printa que voltou para terminar o programa.
+
+  testSemaforo.c - Função de teste dos semáforos.
+Para testar os semáforos usamos o teste Philosophers.c fornecido pelo professor.
+
+
+
