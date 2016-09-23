@@ -431,14 +431,14 @@ int csem_init(csem_t *sem, int count)
     }
   }
 
-  if(!sem || count <= 0){
+  if(!sem || count < 0){
     return ERROR;
   }
 
   sem->count = count;
   sem->fila = 0;
 
-  return ERROR;
+  return SUCCESS;
 }
 
 int cwait(csem_t *sem)
@@ -455,20 +455,28 @@ int cwait(csem_t *sem)
   }
 
   // decrementa 1 do counter ++
-  // Verifica se counter > 0
-  // se for maior que zero, return SUCCESS
-  // se não foi maior que zero
-  //  verifica se fila do semáforo já está criada
-  //    se fila não está criada, cria
-  //  adiciona tcb à fila de espera 
-  //  muda estado da thread de Exec para Bloq
-  //  muda contexto para dipatcher (swapcontext)
+  // Verifica se counter < 0 ++
+  //  verifica se fila do semáforo já está criada ++
+  //    se fila não está criada, cria ++
+  //  adiciona tcb à fila de espera ++
+  //  muda estado da thread de Exec para Bloq ++
+  //  muda contexto para dipatcher (swapcontext) ++
 
   sem->count--;
 
+  if(sem->count < 0){
+    if(!sem->fila){
+      sem->fila = (FILA2 *) malloc(sizeof(FILA2));
+      CreateFila2(sem->fila);
+    }
+    CPU->state = BLOQ;
+    if(AppendFila2(sem->fila, (void *) CPU) != SUCCESS){
+      return ERROR;
+    }
+    swapcontext(&CPU->context, &contextDispatcher);
+  }
 
-
-  return ERROR;
+  return SUCCESS;
 }
 
 int csignal(csem_t *sem)
@@ -480,21 +488,35 @@ int csignal(csem_t *sem)
     }
   }
 
-  // Adiciona 1 ao counter
-  // Verifica se existe fila de bloqueados de semáforo
-  //    se existir transfere primeiro TCB da fila FIFO para fila de aptos
-  // Retorna SUCCESS
+  // Adiciona 1 ao counter ++
+  // Verifica se existe fila de bloqueados de semáforo++
+  //    se existir remove primeiro TCB da fila semaforo++
+  //    Adiciona para fila de aptos++
+  //    
+  // Retorna SUCCESS++
 
   if(!sem){
     return ERROR;
   }
 
-
   sem->count++;
 
+  if(sem->fila){
+    FirstFila2(sem->fila);
+    TCB_t *unlockedThread = (TCB_t *) GetAtIteratorFila2(sem->fila);
+    unlockedThread->state = APTO;
+    AppendFila2(&filaAptos, (void *) unlockedThread);
+    DeleteAtIteratorFila2(sem->fila);
+
+    if(FirstFila2(sem->fila)!= SUCCESS){
+      free(sem->fila);
+      sem->fila = NULL;
+    }
+
+  }
 
 
-  return ERROR;
+  return SUCCESS;
 }
 
 int cidentify(char *name, int size)
