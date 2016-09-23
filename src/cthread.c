@@ -431,6 +431,13 @@ int csem_init(csem_t *sem, int count)
     }
   }
 
+  if(!sem || count <= 0){
+    return ERROR;
+  }
+
+  sem->count = count;
+  sem->fila = 0;
+
   return ERROR;
 }
 
@@ -442,6 +449,17 @@ int cwait(csem_t *sem)
       return ERROR;
     }
   }
+
+  // decrementa 1 do counter
+  // Verifica se counter > 0
+  // se for maior que zero, return SUCCESS
+  // se não foi maior que zero
+  //  verifica se fila do semáforo já está criada
+  //    se fila não está criada, cria
+  //  adiciona tcb à fila de espera 
+  //  muda estado da thread de Exec para Bloq
+  //  muda contexto para dipatcher (swapcontext)
+
 
 
   return ERROR;
@@ -455,6 +473,13 @@ int csignal(csem_t *sem)
       return ERROR;
     }
   }
+
+  // Adiciona 1 ao counter
+  // Verifica se existe fila de bloqueados de semáforo
+  //    se existir transfere primeiro TCB da fila FIFO para fila de aptos
+  // Retorna SUCCESS
+
+
 
   return ERROR;
 }
