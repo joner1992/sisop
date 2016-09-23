@@ -33,4 +33,4 @@ cdata.o: $(SRC_DIR)cdata.c
 #  	$(CC) -o $(BIN_DIR)regran $(SRC_DIR)regran.c -Wall
 
 clean:
-	find $(BIN_DIR) $(LIB_DIR) $(TST_DIR) -type f ! -name 'support.o' ! -name '*.c' ! -name 'Makefile' -delete
+	find $(BIN_DIR) $(LIB_DIR) $(TST_DIR) -type f ! -name 'support.o' ! -name '*.c' ! -name 'Makefile' ! -name "TestsDocumentation.txt" -delete

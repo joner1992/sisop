@@ -26,4 +26,4 @@ cidentify:
 
 
 clean:
-	find -type f ! -name '*.c' ! -name 'Makefile' -delete
+	find -type f ! -name '*.c' ! -name 'Makefile' ! -name "TestsDocumentation.txt" -delete
