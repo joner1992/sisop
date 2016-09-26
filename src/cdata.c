@@ -90,7 +90,6 @@ int searchForTid(PFILA2 fila, int tid)
     TCB_t *wanted;
     wanted = (TCB_t*) GetAtIteratorFila2(fila);
     if (wanted->tid == tid) {
-      printf("Achou tid para join\n");
       return SUCCESS;
     }
     else {
@@ -99,13 +98,11 @@ int searchForTid(PFILA2 fila, int tid)
         iterator = NextFila2(fila);
         tcb = GetAtIteratorFila2(fila);
         if (tcb == NULL) {
-          printf("TID nao encontrado em filaAptos ou filaBloqueados\n");
           return ERROR;
         }
         else {
           wanted = (TCB_t*) tcb;
           if (wanted->tid == tid) {
-            printf("Achou tid para join\n");
             return SUCCESS;
           }
         }
@@ -114,7 +111,6 @@ int searchForTid(PFILA2 fila, int tid)
     }
   }
   else {
-    printf("TID nao encontrado em filaAptos ou filaBloqueados\n");
     return ERROR;
   }
 
@@ -127,7 +123,6 @@ int searchInFilaJoin(PFILA2 filaJoin, int tid) {
     BLOCK_join *ptr;
     ptr = (BLOCK_join *)GetAtIteratorFila2(filaJoin);
     if (ptr->tid == tid) {
-      printf("JA EXISTE ALGUMA THREAD DE TID: %d ESPERANDO.\n", tid);
       return ERROR;
     }
     int iterator = 0;
@@ -138,7 +133,6 @@ int searchInFilaJoin(PFILA2 filaJoin, int tid) {
         return SUCCESS;
       }
       else if (ptr->tid == tid) {
-        printf("JA EXISTE ALGUMA THREAD DE TID: %d ESPERANDO.\n", tid);
         return ERROR;
       }
     }

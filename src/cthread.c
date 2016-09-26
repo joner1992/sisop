@@ -146,8 +146,6 @@ void terminate()
   //                                DESBLOQUEIA O PROCESSO;
   // VERIFICAR FILA DE SEMÁFORO -> CWAIT() / CSIGNAL()
   // RETIRA PROCESSO DE ESTADO EXECUTANDO
-
-  printf("ENTROU PARA TERMINATE\n");
   verifyJoinedProcesses(CPU->tid);
   clearCPU();
   setcontext(&contextDispatcher);
@@ -189,8 +187,6 @@ void dispatch()
   bestTID = searchForBestTicket(&filaAptos, loteryTicket);
 
   selectProcess(bestTID);
-  printf("TICKET: %d | TICKET ESCOLHIDO: %d | TID escolhido: %d\n",
-         loteryTicket, CPU->ticket, CPU->tid);
   CPU->state = EXEC;
 
   setcontext(&CPU->context);
@@ -206,7 +202,6 @@ void dispatch()
 int createDispatcherContext()
 {
   getcontext(&contextDispatcher);
-  printf("dispatch\n");
   contextDispatcher.uc_link = 0;
   contextDispatcher.uc_stack.ss_sp = (char*) malloc(stackSize);
   if (contextDispatcher.uc_stack.ss_sp == NULL) {
@@ -221,7 +216,6 @@ int createDispatcherContext()
 int createTerminatorContext()
 {
   getcontext(&contextTerminator);
-  printf("dispatch\n");
   contextTerminator.uc_link = 0;
   contextTerminator.uc_stack.ss_sp = (char*) malloc(stackSize);
   if (contextTerminator.uc_stack.ss_sp == NULL) {
@@ -252,10 +246,6 @@ int createMainContext() {
 
   getcontext(&mainThread.context);
 
-  printf("Criou Main Context.\n");
-  printf("Criou THREAD DE TID: %d | TICKET: %d\n",
-         mainThread.tid, mainThread.ticket);
-
   CPU = &mainThread;
   if (CPU) {
     printf("Adicionou a CPU!\n");
@@ -282,7 +272,6 @@ int initialize()
   // Criar threads de dispatcher e terminate
   // Fila de semáforos irá ser criada apenas quando for necessária
 
-  printf("Chegou no initialize!\n");
   int dispatcherContextCreated;
   int terminateContextCreated;
 
@@ -352,8 +341,6 @@ int ccreate(void* (*start)(void*), void *arg)
 
 
   tid++;
-  printf("Criou THREAD DE TID: %d | TICKET: %d\n",
-         newThread->tid, newThread->ticket);
 
   int addedToReadyQueue;
   addedToReadyQueue = AppendFila2(&filaAptos, (void *) newThread);
@@ -392,7 +379,6 @@ int cjoin(int tid)
     newPair->threadWaiting = CPU->tid;
     if(AppendFila2(&filaJoin, (void *) newPair) == SUCCESS &&
       AppendFila2(&filaBloqueados, (void *) CPU) == SUCCESS){
-      puts("ENTROU PARA BLOQUEADOS");
     }
     swapcontext(&CPU->context, &contextDispatcher);
     return SUCCESS;

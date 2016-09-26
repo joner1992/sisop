@@ -18,7 +18,10 @@ SRC_DIR=./src/
 TST_DIR=./testes/
 CFLAGS=-m32 -c
 
-all: lib
+all: directory lib
+
+directory:
+	mkdir lib -p -v
 
 lib: clean cthread.o cdata.o
 	ar crs $(LIB_DIR)libcthread.a $(BIN_DIR)support.o $(BIN_DIR)cdata.o $(BIN_DIR)cthread.o
