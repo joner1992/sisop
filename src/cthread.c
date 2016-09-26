@@ -470,7 +470,8 @@ int cwait(csem_t *sem)
       CreateFila2(sem->fila);
     }
     CPU->state = BLOQ;
-    if(AppendFila2(sem->fila, (void *) CPU) != SUCCESS){
+    if(AppendFila2(sem->fila, (void *) CPU) != SUCCESS || 
+       AppendFila2(&filaBloqueados, (void *) CPU) != SUCCESS){
       return ERROR;
     }
     swapcontext(&CPU->context, &contextDispatcher);
@@ -502,12 +503,13 @@ int csignal(csem_t *sem)
   sem->count++;
 
   if(sem->fila){
+
     FirstFila2(sem->fila);
     TCB_t *unlockedThread = (TCB_t *) GetAtIteratorFila2(sem->fila);
     unlockedThread->state = APTO;
     AppendFila2(&filaAptos, (void *) unlockedThread);
+    deleteFromBlockedQueue(&filaBloqueados, unlockedThread->tid);
     DeleteAtIteratorFila2(sem->fila);
-
     if(FirstFila2(sem->fila)!= SUCCESS){
       free(sem->fila);
       sem->fila = NULL;

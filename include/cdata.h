@@ -32,6 +32,7 @@ typedef struct t_JOIN {
 } BLOCK_join;
 
 int createQueue(PFILA2 fila);
+void deleteFromBlockedQueue(PFILA2 filaBloqueados, int tid);
 int generateTicket();
 void runsThroughQueue(PFILA2 fila);
 int searchForBestTicket(PFILA2 fila, int loteryTicket);

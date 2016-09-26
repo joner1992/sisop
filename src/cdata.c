@@ -147,6 +147,29 @@ int searchInFilaJoin(PFILA2 filaJoin, int tid) {
   return SUCCESS;
 }
 
+void deleteFromBlockedQueue(PFILA2 filaBloqueados, int tid){
+  int first;
+
+  first = FirstFila2(filaBloqueados);
+  if(first == SUCCESS){
+    TCB_t *ptr;
+    ptr = (TCB_t *) GetAtIteratorFila2(filaBloqueados);
+    if(ptr->tid == tid){
+      DeleteAtIteratorFila2(filaBloqueados);
+    }
+    int iterator = 0;
+    while (iterator == 0) {
+      iterator = NextFila2(filaBloqueados);
+      ptr = (TCB_t *)GetAtIteratorFila2(filaBloqueados);
+      if (ptr == NULL) {
+        return;
+      }
+      if(ptr->tid == tid){
+        DeleteAtIteratorFila2(filaBloqueados);
+      }      
+    }
+  }
+}
 
 
 void runsThroughQueue(PFILA2 fila)
